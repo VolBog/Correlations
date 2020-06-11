@@ -1,23 +1,22 @@
 import Entity.TTTRrecord;
-import com.sun.org.apache.xalan.internal.xsltc.compiler.Parser;
+
+
 import me.tongfei.progressbar.ProgressBar;
 
 import java.awt.*;
 import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 public class Main {
     public static void main(String[] args) throws IOException {
         int NUMBEROFPHOTONS = 10000000;
-        int NUMBEROFPHOTONStoEND = 100000;
+        int NUMBEROFPHOTONStoEND = 10000;
         double bin = 0.000001;
         double duration = 0.01;
-
-        File file = new File("D:\\Work\\Correlations\\3YYB_I0_Ch0_1k_Ch1_1k_1h.ptu");
+        int [] hist = createHist(bin, duration);
+        File file = new File("C:\\Work\\Gd2O3_t1.ptu");
 
         InputStream inputStream = new FileInputStream(file);
 
@@ -206,15 +205,16 @@ public class Main {
                 }
 
                 boolean finish = false;
-                if (numRec - n < NUMBEROFPHOTONStoEND) {
+                if ((numRec - n) < NUMBEROFPHOTONStoEND) {
                     finish = true;
                 }
 
 
-                if (tttRrecords.size() > NUMBEROFPHOTONS) {
+                if (tttRrecords.size() > NUMBEROFPHOTONS || (numRec - 1) == n) {
 
                     System.out.println("start calculate");
                     ArrayList<Double> differences = calculate(tttRrecords, finish);
+                    hist = addHist(differences, hist, bin);
                     System.out.println("finish");
                 }
 
@@ -285,21 +285,58 @@ public class Main {
                         // System.out.println((tttRrecordCompare.getTrueTime()));
                     }
 
-                    if ((tttRrecordCompare.getTrueTime() - tttRrecord.getTrueTime()) > 0.001) {
+                    if ((tttRrecordCompare.getTrueTime() - tttRrecord.getTrueTime()) > 0.0001) {
                         break;
                     }
                 }
             }
-            if (!finish & (tttRecords.size() - i) < 10000) {
-
-                for (int del = 0; (tttRecords.size() - del) < 10000; del++) {
-                    tttRecords.remove(tttRecords.get(i));
-                }
+            if (!finish && (tttRecords.size() - i) < 10000) {
+                System.out.println("del: " + tttRecords.size());
+                tttRecords.subList(0, tttRecords.size() - 10000).clear();
+//                for (int del = 0;  del < (tttRecords.size() - 10000); del++) {
+//                    //System.out.println("s");
+//                    tttRecords.remove(tttRecords.get(del));
+//                }
+                System.out.println("del fin: " + tttRecords.size());
                 break;
             }
 
         }
         return difference;
+    }
+
+
+    public static int[] createHist(double sizeOfRange, double duration) {
+        int numberofBings = (int) (duration / sizeOfRange);
+        return new int[numberofBings];
+
+    }
+
+    public static int[] addHist(ArrayList<Double> diff, int[] hist, double sizeOfRange) {
+
+        int nRanges = hist.length;
+//        int[] buckets = new int[nRanges];
+//        double max = Collections.max(diff);
+//        double min = Collections.min(diff);
+//        double sizeOfRange = (max - min) / (nRanges - 1);
+
+
+//        binofvalue = value // binwith
+//        if binofvalue < (len(hist) - 1) / 2 and binofvalue > -(len(hist) - 1) / 2:
+//        binofvalue = (len(hist) - 1) / 2 + binofvalue
+//        # print(binofvalue)
+//        hist[int(binofvalue)] += 1
+        for (double elem : diff) {
+
+            for (int i = 0; i < nRanges; i++) {
+                if ((elem >= sizeOfRange * i) && (elem < sizeOfRange * (i + 1)))
+                    hist[i]++;
+            }
+        }
+        for (int i = 0; i < nRanges; i++) {
+            System.out.println(sizeOfRange * i + ": " + hist[i]);
+        }
+        return hist;
     }
 
 
