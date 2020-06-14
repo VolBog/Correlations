@@ -13,10 +13,10 @@ public class Main {
     public static void main(String[] args) throws IOException {
         int NUMBEROFPHOTONS = 10000000;
         int NUMBEROFPHOTONStoEND = 10000;
-        double bin = 0.000001;
-        double duration = 0.01;
-        int [] hist = createHist(bin, duration);
-        File file = new File("C:\\Work\\Gd2O3_t1.ptu");
+        double bin = 0.0001;
+        int duration = 10; // 200000 ms
+        int[] hist = createHist(bin, duration);
+        File file = new File("D:\\Work\\Correlations\\Stable\\2YYb_I1_4k_I0_4k_f_830_d380_0.5A_136uW_t=15h.ptu");
 
         InputStream inputStream = new FileInputStream(file);
 
@@ -153,6 +153,9 @@ public class Main {
 
         double globclock = Double.valueOf(headers.get("MeasDesc_GlobalResolution"));
         int numRec = Integer.parseInt(headers.get("TTResult_NumberOfRecords"));
+        long exptime = Long.parseLong(headers.get("MeasDesc_AcquisitionTime"));
+
+        int photonsnumber = 0;
 
         long ofltime = 0;
         int WRAPAROUND = 210698240;
@@ -183,7 +186,7 @@ public class Main {
 
                 recordData = ((record[3] & 0xFF) << 24) | ((record[2] & 0xFF) << 16) | ((record[1] & 0xFF) << 8) | (record[0] & 0xFF); //Convert from little endian uint32
 
-                timeTag = (recordData >> 4) & 268435455;
+                timeTag = (recordData >> 0) & 268435455;
                 channel = (recordData >> 28) & 0xF;
 
                 //System.out.println(Integer.toBinaryString(recordData));
@@ -196,11 +199,12 @@ public class Main {
                         overflows++;
                     }
                 } else {
-                    truetime = (ofltime + timeTag) * globclock;
+                    truetime = (ofltime + timeTag) * globclock * 1e9;
                     tttRrecord.setChannel(channel);
                     tttRrecord.setTimeTag(timeTag);
                     tttRrecord.setTrueTime(truetime);
                     tttRrecords.add(tttRrecord);
+                    photonsnumber++;
                     // System.out.println(n + " : CHN " + channel + " " + timeTag + " " + truetime);
                 }
 
@@ -213,13 +217,14 @@ public class Main {
                 if (tttRrecords.size() > NUMBEROFPHOTONS || (numRec - 1) == n) {
 
                     System.out.println("start calculate");
-                    ArrayList<Double> differences = calculate(tttRrecords, finish);
+                    ArrayList<Double> differences = calculate(tttRrecords, finish, duration);
                     hist = addHist(differences, hist, bin);
                     System.out.println("finish");
                 }
 
-
             }
+
+            printhist(normalizeHist(hist, bin, photonsnumber, exptime), bin);
         }
 
     }
@@ -272,8 +277,9 @@ public class Main {
         return recursiveReverse(s.substring(1)) + s.charAt(0);
     }
 
-    static ArrayList<Double> calculate(ArrayList<TTTRrecord> tttRecords, Boolean finish) {
+    static ArrayList<Double> calculate(ArrayList<TTTRrecord> tttRecords, Boolean finish, int duration) {
         ArrayList<Double> difference = new ArrayList<>();
+        Collections.sort(tttRecords, new Sortbyroll());
         for (int i = 0; i < tttRecords.size(); i++) {
             TTTRrecord tttRrecord = tttRecords.get(i);
             if (tttRrecord.getChannel() == 0) {
@@ -282,10 +288,10 @@ public class Main {
                     if (tttRrecordCompare.getChannel() == 1) {
                         double differense = tttRrecordCompare.getTrueTime() - tttRrecord.getTrueTime();
                         difference.add(differense);
-                        // System.out.println((tttRrecordCompare.getTrueTime()));
+                        // System.out.println(differense);
                     }
 
-                    if ((tttRrecordCompare.getTrueTime() - tttRrecord.getTrueTime()) > 0.0001) {
+                    if ((tttRrecordCompare.getTrueTime() - tttRrecord.getTrueTime()) > duration) {
                         break;
                     }
                 }
@@ -327,18 +333,46 @@ public class Main {
 //        # print(binofvalue)
 //        hist[int(binofvalue)] += 1
         for (double elem : diff) {
-
-            for (int i = 0; i < nRanges; i++) {
-                if ((elem >= sizeOfRange * i) && (elem < sizeOfRange * (i + 1)))
-                    hist[i]++;
+            int binofvalue = (int) (elem / sizeOfRange);
+            if (binofvalue < hist.length) {
+                hist[binofvalue] += 1;
             }
+//            for (int i = 0; i < nRanges; i++) {
+//                if ((elem >= sizeOfRange * i) && (elem < sizeOfRange * (i + 1)))
+//                    hist[i]++;
+//            }
         }
-        for (int i = 0; i < nRanges; i++) {
-            System.out.println(sizeOfRange * i + ": " + hist[i]);
-        }
+
         return hist;
     }
 
+    static void printhist(double[] hist, double sizeOfRange) {
+        for (int i = 0; i < hist.length; i++) {
+            System.out.println(sizeOfRange * i + " " + hist[i]);
+        }
+        FileWriter nFile = null;
+        try {
+            nFile = new FileWriter("D:\\Work\\Correlations\\new_program\\1.txt");
+            for (int i = 0; i < hist.length; i++) {
+                nFile.write(sizeOfRange * i + " " + hist[i] + "\n");
+            }
 
+            nFile.close();
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    static double[] normalizeHist(int[] hist, double sizeofBean, int allphotons, long exptime) {
+        double[] norm = new double[hist.length];
+
+
+        //System.out.println(sizeofBean);
+        for (int i = 0; i < hist.length; i++) {
+            norm[i] = hist[i]; //(allphotons/((exptime/sizeofBean)*(exptime/sizeofBean)))*hist[i];
+        }
+        return norm;
+    }
 }
 
