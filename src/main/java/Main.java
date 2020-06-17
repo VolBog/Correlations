@@ -13,10 +13,10 @@ public class Main {
     public static void main(String[] args) throws IOException {
         int NUMBEROFPHOTONS = 10000000;
         int NUMBEROFPHOTONStoEND = 10000;
-        double bin = 0.0001;
-        int duration = 10; // 200000 ms
+        double bin = 1;
+        int duration = 200000; // 200000 mks
         int[] hist = createHist(bin, duration);
-        File file = new File("D:\\Work\\Correlations\\Stable\\2YYb_I1_4k_I0_4k_f_830_d380_0.5A_136uW_t=15h.ptu");
+        File file = new File("C:\\Work\\Corr\\Bi\\GG1_i0_1.5k_i1=2k_t=1h.ptu");
 
         InputStream inputStream = new FileInputStream(file);
 
@@ -156,6 +156,8 @@ public class Main {
         long exptime = Long.parseLong(headers.get("MeasDesc_AcquisitionTime"));
 
         int photonsnumber = 0;
+        int allphotonsch0 = 0;
+        int allphotonsch1 = 0;
 
         long ofltime = 0;
         int WRAPAROUND = 210698240;
@@ -205,6 +207,11 @@ public class Main {
                     tttRrecord.setTrueTime(truetime);
                     tttRrecords.add(tttRrecord);
                     photonsnumber++;
+                    if(channel == 0){
+                        allphotonsch0++;
+                    } else {
+                        allphotonsch1++;
+                    }
                     // System.out.println(n + " : CHN " + channel + " " + timeTag + " " + truetime);
                 }
 
@@ -224,7 +231,7 @@ public class Main {
 
             }
 
-            printhist(normalizeHist(hist, bin, photonsnumber, exptime), bin);
+            printhist(normalizeHist(hist, bin, duration, allphotonsch0, allphotonsch1, photonsnumber, exptime), bin);
         }
 
     }
@@ -297,13 +304,13 @@ public class Main {
                 }
             }
             if (!finish && (tttRecords.size() - i) < 10000) {
-                System.out.println("del: " + tttRecords.size());
+           //     System.out.println("del: " + tttRecords.size());
                 tttRecords.subList(0, tttRecords.size() - 10000).clear();
 //                for (int del = 0;  del < (tttRecords.size() - 10000); del++) {
 //                    //System.out.println("s");
 //                    tttRecords.remove(tttRecords.get(del));
 //                }
-                System.out.println("del fin: " + tttRecords.size());
+               // System.out.println("del fin: " + tttRecords.size());
                 break;
             }
 
@@ -347,12 +354,12 @@ public class Main {
     }
 
     static void printhist(double[] hist, double sizeOfRange) {
-        for (int i = 0; i < hist.length; i++) {
-            System.out.println(sizeOfRange * i + " " + hist[i]);
-        }
+//        for (int i = 0; i < hist.length; i++) {
+//            System.out.println(sizeOfRange * i + " " + hist[i]);
+//        }
         FileWriter nFile = null;
         try {
-            nFile = new FileWriter("D:\\Work\\Correlations\\new_program\\1.txt");
+            nFile = new FileWriter("C:\\Work\\1.txt");
             for (int i = 0; i < hist.length; i++) {
                 nFile.write(sizeOfRange * i + " " + hist[i] + "\n");
             }
@@ -364,13 +371,28 @@ public class Main {
         }
     }
 
-    static double[] normalizeHist(int[] hist, double sizeofBean, int allphotons, long exptime) {
+    static double[] normalizeHist(int[] hist, double sizeofBean, double duration, int allphotonsch0, int allphotonsch1, int allphotons, long exptime) {
         double[] norm = new double[hist.length];
 
 
-        //System.out.println(sizeofBean);
+        System.out.println("photonsch0: " + allphotonsch0);
+        System.out.println("photonsch1: " + allphotonsch1);
+        System.out.println("exptime: " + exptime);
+        System.out.println("Nb: " + (double) allphotons / exptime);
+        System.out.println("integrated ch0: " + (double) allphotonsch0 / exptime);
+        System.out.println("integrated ch1: " + (double) allphotonsch1 / exptime);
+        allphotons = 0;
         for (int i = 0; i < hist.length; i++) {
-            norm[i] = hist[i]; //(allphotons/((exptime/sizeofBean)*(exptime/sizeofBean)))*hist[i];
+            allphotons += hist[i];
+        }
+
+        double n = (allphotons)/(duration*1000/ sizeofBean);
+        double n1 = (double) allphotonsch0 / exptime;
+        double n2 = (double) allphotonsch1 / exptime;
+
+        System.out.println("Corr:" + allphotons/(duration / sizeofBean));
+        for (int i = 0; i < hist.length; i++) {
+            norm[i] = (n/(n1*n2))*hist[i];
         }
         return norm;
     }
