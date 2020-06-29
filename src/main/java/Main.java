@@ -16,7 +16,7 @@ public class Main {
         double bin = 1;
         int duration = 200000; // 200000 mks
         int[] hist = createHist(bin, duration);
-        File file = new File("C:\\Work\\Corr\\Bi\\GG1_i0_1.5k_i1=2k_t=1h.ptu");
+        File file = new File("C:\\Work\\Stable_corr\\2YYb_I1_4k_I0_4k_f_830_d380_0.5A_136uW_t=15h.ptu");
 
         InputStream inputStream = new FileInputStream(file);
 
@@ -386,13 +386,13 @@ public class Main {
             allphotons += hist[i];
         }
 
-        double n = (allphotons)/(duration*1000/ sizeofBean);
+        double n = (double) allphotons / exptime;//(allphotons/(duration)/sizeofBean);
         double n1 = (double) allphotonsch0 / exptime;
         double n2 = (double) allphotonsch1 / exptime;
-
-        System.out.println("Corr:" + allphotons/(duration / sizeofBean));
+        System.out.println("Nb: " + (double) allphotons / exptime);
+        System.out.println("Corr:" + allphotons/(duration/ sizeofBean));
         for (int i = 0; i < hist.length; i++) {
-            norm[i] = (n/(n1*n2))*hist[i];
+            norm[i] = (1/(n*n1*n2))*hist[i];
         }
         return norm;
     }
