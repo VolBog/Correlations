@@ -13,11 +13,12 @@ public class Main {
     public static void main(String[] args) throws IOException {
         int NUMBEROFPHOTONS = 10000000;
         int NUMBEROFPHOTONStoEND = 10000;
-        double bin = 1;
-        int duration = 200000; // 200000 mks
+        double bin = 0.25;
+        int duration = 500000; // 200000 mks
         int[] hist = createHist(bin, duration);
-        File file = new File("C:\\Work\\Stable_corr\\2YYb_I1_4k_I0_4k_f_830_d380_0.5A_136uW_t=15h.ptu");
-
+        File file = new File("C:\\Work\\Corr\\Bi\\GG1_i0_1.5k_i1=2k_t=1h.ptu");
+        String filename =  file.getName().replaceFirst("[.][^.]+$", "");
+        String outfileName = filename  + "_bin_0_25_duration:" + duration + ".txt";
         InputStream inputStream = new FileInputStream(file);
 
         byte[] buffer = new byte[8];
@@ -231,7 +232,7 @@ public class Main {
 
             }
 
-            printhist(normalizeHist(hist, bin, duration, allphotonsch0, allphotonsch1, photonsnumber, exptime), bin);
+            printhist(normalizeHist(hist, bin, duration, allphotonsch0, allphotonsch1, photonsnumber, exptime), bin, outfileName);
         }
 
     }
@@ -353,13 +354,13 @@ public class Main {
         return hist;
     }
 
-    static void printhist(double[] hist, double sizeOfRange) {
+    static void printhist(double[] hist, double sizeOfRange, String filename) {
 //        for (int i = 0; i < hist.length; i++) {
 //            System.out.println(sizeOfRange * i + " " + hist[i]);
 //        }
         FileWriter nFile = null;
         try {
-            nFile = new FileWriter("C:\\Work\\1.txt");
+            nFile = new FileWriter("C:\\Work\\" + filename);
             for (int i = 0; i < hist.length; i++) {
                 nFile.write(sizeOfRange * i + " " + hist[i] + "\n");
             }
@@ -392,7 +393,7 @@ public class Main {
         System.out.println("Nb: " + (double) allphotons / exptime);
         System.out.println("Corr:" + allphotons/(duration/ sizeofBean));
         for (int i = 0; i < hist.length; i++) {
-            norm[i] = (1/(n*n1*n2))*hist[i];
+            norm[i] = (1/(n1*n2))*hist[i];
         }
         return norm;
     }
